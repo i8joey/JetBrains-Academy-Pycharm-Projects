@@ -4,7 +4,7 @@ import nltk
 
 
 # Create a trigram from file
-file = open(input(), "r", encoding="utf-8")
+file = open("corpus.txt", "r", encoding="utf-8")
 book = file.read()
 file.close()
 token_list = WhitespaceTokenizer().tokenize(book)
